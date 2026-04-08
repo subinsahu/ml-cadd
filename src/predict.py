@@ -2,16 +2,15 @@
 Predict aqueous solubility (logS) for new SMILES strings.
 """
 
-import pickle
+import joblib
 import numpy as np
 from src.features import smiles_to_features
 
 MODEL_PATH = "data/model.pkl"
 
 
-def load_model():
-    with open(MODEL_PATH, "rb") as f:
-        return pickle.load(f)
+def load_model(model_path: str = None):
+    return joblib.load(model_path or MODEL_PATH)
 
 
 def predict(smiles: str | list[str], model=None) -> dict | list[dict]:

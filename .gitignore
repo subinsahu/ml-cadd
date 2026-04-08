@@ -1,0 +1,24 @@
+# Model and large data files — regenerate with: python main.py train
+data/model.pkl
+data/AqSolDB_v1.0_min.csv
+data/parity_plot.png
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv/
+venv/
+
+# macOS
+.DS_Store

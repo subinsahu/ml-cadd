@@ -1,50 +1,33 @@
 """
 Train and evaluate a Random Forest model for aqueous solubility prediction.
 Target: logS (log10 of molar solubility in mol/L)
+
+Dataset: AqSolDB (data/AqSolDB_v1.0_min.csv) — split 80/20 into train/test.
 """
 
-import os
-import pickle
-import numpy as np
+import joblib
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 
 from src.features import featurize_dataframe
 
-DATA_URL = (
-    "https://raw.githubusercontent.com/deepchem/deepchem/master/"
-    "datasets/delaney-processed.csv"
-)
-DATA_PATH = "data/esol.csv"
+DATA_PATH  = "data/AqSolDB_v1.0_min.csv"
 MODEL_PATH = "data/model.pkl"
 
 
 def load_data() -> pd.DataFrame:
-    if not os.path.exists(DATA_PATH):
-        print("Downloading ESOL dataset...")
-        import requests
-        r = requests.get(DATA_URL, timeout=30)
-        r.raise_for_status()
-        with open(DATA_PATH, "w") as f:
-            f.write(r.text)
-        print(f"Saved to {DATA_PATH}")
-
     df = pd.read_csv(DATA_PATH)
-    # DeepChem's ESOL columns: 'smiles', 'measured log solubility in mols per litre'
-    df = df.rename(columns={
-        "smiles": "smiles",
-        "measured log solubility in mols per litre": "logS",
-    })
+    df = df.rename(columns={"SMILES": "smiles", "Solubility": "logS"})
     return df[["smiles", "logS"]].dropna()
 
 
 def train(random_state: int = 42):
+    # --- Load & split ---
     df = load_data()
-    print(f"Dataset size: {len(df)} molecules")
+    print(f"Dataset (AqSolDB): {len(df)} molecules")
 
     print("Featurizing molecules...")
     X, valid_mask = featurize_dataframe(df, smiles_col="smiles")
@@ -54,8 +37,10 @@ def train(random_state: int = 42):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=random_state
     )
+    print(f"Train: {len(X_train)}  Test: {len(X_test)}")
 
-    print("Training Random Forest...")
+    # --- Train ---
+    print("\nTraining Random Forest...")
     model = RandomForestRegressor(
         n_estimators=200,
         max_features="sqrt",
@@ -64,23 +49,24 @@ def train(random_state: int = 42):
     )
     model.fit(X_train, y_train)
 
+    # --- Evaluate ---
     y_pred_train = model.predict(X_train)
-    y_pred_test = model.predict(X_test)
+    y_pred_test  = model.predict(X_test)
 
     metrics = {
         "train_rmse": mean_squared_error(y_train, y_pred_train) ** 0.5,
-        "test_rmse": mean_squared_error(y_test, y_pred_test) ** 0.5,
-        "train_r2": r2_score(y_train, y_pred_train),
-        "test_r2": r2_score(y_test, y_pred_test),
-        "test_mae": mean_absolute_error(y_test, y_pred_test),
+        "test_rmse":  mean_squared_error(y_test,  y_pred_test)  ** 0.5,
+        "train_r2":   r2_score(y_train, y_pred_train),
+        "test_r2":    r2_score(y_test,  y_pred_test),
+        "test_mae":   mean_absolute_error(y_test, y_pred_test),
     }
 
     print("\n=== Results ===")
     print(f"Train RMSE: {metrics['train_rmse']:.3f}  R²: {metrics['train_r2']:.3f}")
     print(f"Test  RMSE: {metrics['test_rmse']:.3f}  R²: {metrics['test_r2']:.3f}  MAE: {metrics['test_mae']:.3f}")
 
-    with open(MODEL_PATH, "wb") as f:
-        pickle.dump(model, f)
+    # --- Save ---
+    joblib.dump(model, MODEL_PATH, compress=3)
     print(f"\nModel saved to {MODEL_PATH}")
 
     _plot_parity(y_test, y_pred_test)
@@ -94,9 +80,9 @@ def _plot_parity(y_true, y_pred):
     ax.plot(lim, lim, "r--", linewidth=1)
     ax.set_xlim(lim)
     ax.set_ylim(lim)
-    ax.set_xlabel("Measured logS")
+    ax.set_xlabel("Measured logS (AqSolDB)")
     ax.set_ylabel("Predicted logS")
-    ax.set_title("Solubility Prediction — Test Set Parity Plot")
+    ax.set_title("Solubility Prediction — AqSolDB Test Set Parity Plot")
     rmse = mean_squared_error(y_true, y_pred) ** 0.5
     r2 = r2_score(y_true, y_pred)
     ax.text(0.05, 0.92, f"RMSE={rmse:.3f}\nR²={r2:.3f}", transform=ax.transAxes)
