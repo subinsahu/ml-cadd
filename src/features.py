@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
+from rdkit.Chem.rdFingerprintGenerator import GetMorganGenerator
 
 
 DESCRIPTOR_NAMES = [
@@ -49,9 +50,8 @@ def compute_descriptors(mol) -> np.ndarray:
 
 
 def compute_morgan_fp(mol) -> np.ndarray:
-    fp = rdMolDescriptors.GetMorganFingerprintAsBitVect(
-        mol, radius=MORGAN_RADIUS, nBits=MORGAN_NBITS
-    )
+    gen = GetMorganGenerator(radius=MORGAN_RADIUS, fpSize=MORGAN_NBITS)
+    fp = gen.GetFingerprint(mol)
     return np.array(fp, dtype=float)
 
 

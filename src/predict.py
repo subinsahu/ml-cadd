@@ -6,6 +6,9 @@ import joblib
 import numpy as np
 from src.features import smiles_to_features
 
+from rdkit import RDLogger
+RDLogger.DisableLog('rdApp.*')
+
 MODEL_PATH = "data/model.pkl"
 
 
